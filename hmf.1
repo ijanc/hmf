@@ -1,0 +1,142 @@
+.\"
+.\" Copyright (c) 2025-2026 Murilo Ijanc' <murilo@ijanc.org>
+.\"
+.\" Permission to use, copy, modify, and/or distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: April 30 2026 $
+.Dt HMF 1
+.Os
+.Sh NAME
+.Nm hmf
+.Nd hide faces in an image by overlaying another image
+.Sh SYNOPSIS
+.Nm hmf
+.Fl i Ar input
+.Fl o Ar output
+.Fl f Ar face
+.Op Fl m Ar model
+.Op Fl t Ar threshold
+.Op Fl p Ar percent
+.Op Fl v
+.Sh DESCRIPTION
+.Nm
+detects human faces in
+.Ar input
+using the YuNet DNN face detector and replaces each detected region
+with
+.Ar face ,
+writing the resulting image to
+.Ar output .
+The replacement image is resized to match each face bounding box.
+If
+.Ar face
+is a PNG with an alpha channel, transparency is honoured via per-pixel
+alpha blending; otherwise the region is copied verbatim.
+.Pp
+YuNet is a small CNN
+.Pq Pa face_detection_yunet_2023mar.onnx , approx. 230 KB
+that ships separately from the OpenCV runtime.
+It detects upright, profile, tilted, occluded and infant faces far more
+reliably than the legacy Haar cascades, at the cost of a one-time model
+download
+.Pq see Sx FILES .
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl i Ar input
+Path to the source image.
+Any format supported by OpenCV is accepted
+.Pq JPEG, PNG, BMP, TIFF, WebP, ... .
+.It Fl o Ar output
+Path where the resulting image is written.
+The encoder is selected from the file extension.
+.It Fl f Ar face
+Path to the replacement image.
+A PNG with an alpha channel produces the cleanest blend.
+.It Fl m Ar model
+Path to the YuNet ONNX model.
+Defaults to
+.Pa /usr/local/share/hmf/yunet.onnx .
+.It Fl t Ar threshold
+Confidence threshold for accepting a detection, in
+.Bq 0.0 , 1.0 .
+Lower values keep more candidates at the risk of false positives.
+The default is
+.Cm 0.6 .
+.It Fl p Ar percent
+Grow each detected bounding box by
+.Ar percent
+of its width and height before overlaying, keeping the box centred on
+the original detection.
+Useful when the detector returns a tight crop and the replacement image
+should also cover the forehead, chin or hair.
+The default is
+.Cm 0
+.Pq no padding .
+.It Fl v
+Verbose mode.
+Print the model path, image dimensions and the bounding box plus
+confidence score of every detected face on standard error.
+.El
+.Sh FILES
+.Bl -tag -width "/usr/local/share/hmf/yunet.onnx"
+.It Pa /usr/local/share/hmf/yunet.onnx
+Default location of the YuNet ONNX model.
+Installed by
+.Cm make install ,
+which depends on the model being present in the source tree.
+Run
+.Cm make fetch-model
+once before installing to download it from the OpenCV Model Zoo.
+.El
+.Sh EXIT STATUS
+.Ex -std hmf
+.Pp
+The program exits with status 1 if any of the input, output, face or
+model files cannot be read or written, or if the command line is
+malformed.
+A run that succeeds but detects zero faces still exits with status 0;
+the output image is written unchanged.
+.Sh EXAMPLES
+Replace every detected face in
+.Pa group.jpg
+with
+.Pa mask.png ,
+using the installed model:
+.Bd -literal -offset indent
+$ hmf -i group.jpg -o anonymised.jpg -f mask.png
+.Ed
+.Pp
+Run from a build tree, with verbose detection output and a lower
+confidence threshold:
+.Bd -literal -offset indent
+$ hmf -v -t 0.4 -m ./yunet.onnx \\
+    -i baby.jpg -o out.jpg -f mask.png
+.Ed
+.Sh SEE ALSO
+.Xr mandoc 1
+.Sh CAVEATS
+The model file is not part of the
+.Nm
+source tree; fetch it with
+.Cm make fetch-model
+before
+.Cm make install .
+Heavy occlusion, motion blur or very low resolution can still cause
+missed detections.
+Lowering
+.Fl t
+helps recover marginal detections at the cost of false positives,
+especially on busy backgrounds.
+.Sh AUTHORS
+.An Murilo Ijanc' Aq Mt murilo@ijanc.org
