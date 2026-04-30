@@ -6,6 +6,8 @@ It is written in C++ and uses OpenCV's YuNet DNN face detector, which
 handles tilted, partial, profile and infant faces far more reliably
 than the legacy Haar cascades.
 
+![hmf overlaying a mask on a detected face](anonymised.jpg)
+
 
 Requirements
 ------------
