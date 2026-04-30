@@ -11,23 +11,12 @@ than the legacy Haar cascades.
 
 Requirements
 ------------
-In order to build hmf you need a C++11 compiler and OpenCV 4.5.4+ with
-the `core`, `imgproc`, `imgcodecs`, `objdetect` and `dnn` modules
-installed.
+- OpenCV 4.5.4+
 
-On Arch Linux:
-
-    sudo pacman -S opencv
-
-On Debian/Ubuntu:
-
-    sudo apt install libopencv-dev pkg-config
-
-On OpenBSD:
-
-    doas pkg_add opencv
-
-You also need `curl` to fetch the model the first time.
+The YuNet ONNX model is shipped in this repository as `yunet.onnx`, so
+no extra download is needed to build and run. If you prefer to fetch a
+fresh copy from the OpenCV Model Zoo, `make fetch-model` does that --
+it requires `curl`.
 
 
 Installation
@@ -35,9 +24,8 @@ Installation
 Edit Makefile to match your local setup (hmf is installed into
 the /usr/local/bin namespace by default).
 
-Fetch the YuNet ONNX model (~230 KB) and build:
+Build:
 
-    make fetch-model
     make
 
 Then install the binary, the manual page and the model:
@@ -92,28 +80,8 @@ Exit status is 0 on success and 1 on any I/O or argument error. A run
 that detects zero faces still exits 0; the output is written unchanged.
 
 
-How it works
-------------
-1. Load `input` and `face` with `cv::imread`. The face image is loaded
-   with `IMREAD_UNCHANGED` so that PNG alpha channels are preserved.
-2. Instantiate a `cv::FaceDetectorYN` from the YuNet ONNX model.
-3. Run `detector->detect(input, detections)`. The result is an Nx15
-   float matrix; columns 0..3 hold the bounding box (x, y, w, h) and
-   column 14 holds the confidence score.
-4. For every detection above the confidence threshold, clamp its box to
-   the image, resize `face` to that size and blit it on top of the
-   source.
-   If `face` has an alpha channel, each pixel is blended with the
-   underlying image; otherwise the region is overwritten.
-5. Encode and write the result to `output`.
-
-
 Caveats
 -------
-The YuNet model is not part of the source tree -- run
-`make fetch-model` once to download it from the OpenCV Model Zoo into
-the working directory before building or installing.
-
 Heavy occlusion, motion blur or very low resolution can still cause
 missed detections. Lowering `-t` recovers marginal detections at the
 cost of false positives, especially on busy backgrounds.
